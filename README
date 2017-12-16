@@ -1,0 +1,3 @@
+game/Game.h is the entry point of the game.
+main.h is the entry point of the aplication.
+MainDrawFunc.h is some sort of middle ground between the two of them. In it should reside window properties that do not directly concern the game.

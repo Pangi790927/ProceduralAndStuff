@@ -27,7 +27,7 @@ public:
 	FPSCounter fpsCount;
 
 	Game() 
-	: gameProcMap(30, 9, Point2f(0, 0))
+	: gameProcMap(100, 9, Point2f(0, 0))
 	{}
 
 	ShaderProgram loadShader(std::string shaderName) {
@@ -80,7 +80,7 @@ public:
 
 		gameProcMap.initDraw();
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
 
 	void input (Camera &camera, Keyboard &keyboard, Mouse &mouse

@@ -1,7 +1,7 @@
 CC = gcc
 CXX = g++
 
-DIRS = game time graphics graphics/procedural
+DIRS = game time graphics graphics/procedural/proceduralMap graphics/procedural/proceduralTexture
 INCLUDE = $(patsubst %, -I%/, $(DIRS))
 
 window: clear main.cpp

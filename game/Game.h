@@ -2,18 +2,25 @@
 #define GAME_H
 
 #include "GameMesh.h"
-#include "ProceduralMap.h"
 #include "FPSCounter.h"
 #include "TimeInterval.h"
+
+#include "ProceduralMap.h"
+#include "ProceduralTexture.h"
+
+#define TESTING_PROCEDURAL_MAP 0
+#define TESTING_PROCEDURAL_TEXTURE 1
 
 class Game {
 public:
 	GameMesh cursor;
 	GameMesh mySphere;
 	GameMesh gameTestObjs;
+	GameMesh square;
 	ShaderProgram gameMenuShader;
 	ShaderProgram gameDefaultShader;
 	ShaderProgram gameMapShader;
+	ShaderProgram gameTexShader;
 
 	Point3f lightDir = Point3f(-1.0, -3.0, -2.0).normalize();
 
@@ -24,10 +31,12 @@ public:
 	Point3f camPos;
 	ProceduralMap<> gameProcMap;
 
+	ProceduralTexture gameProcTex;
+
 	FPSCounter fpsCount;
 
 	Game() 
-	: gameProcMap(100, 9, Point2f(0, 0))
+	: gameProcMap(100, 9, Point2f(0, 0)), gameProcTex(256, 256)
 	{}
 
 	ShaderProgram loadShader(std::string shaderName) {
@@ -41,17 +50,19 @@ public:
 			return prog;
 		}
 		catch (const std::exception& except) {
-			ERROR_PRINT(std::string(except.what()), 0, 0);
+			std::cout << "Exception occured " << except.what() << std::endl;
 			return ShaderProgram();
 		}
 	}
 
 	void init() {
-		glEnable( GL_MULTISAMPLE );
+		glEnable(GL_MULTISAMPLE);
+		glEnable(GL_TEXTURE_2D);
 
-		gameMenuShader = loadShader("gameMenuShader");
-		gameMapShader = loadShader("gameMapShader");
-		gameDefaultShader = loadShader("defaultShader");
+		gameMenuShader = loadShader("Shaders/gameMenuShader");
+		gameMapShader = loadShader("Shaders/gameMapShader");
+		gameDefaultShader = loadShader("Shaders/defaultShader");
+		gameTexShader = loadShader("Shaders/textureShader");
 		// cursor.addSquare(0.01, Point3f(1, 0, 1), Matrix4f::returnScaleMatrix(20, 1, 1));
 		// cursor.addSquare(0.01, Point3f(1, 0, 1), Matrix4f::returnScaleMatrix(1, 20, 1));
 		
@@ -74,11 +85,20 @@ public:
 
 		mySphere.addSphere(0.1, 30, Point3f(1, 0, 0));
 
+		square.addSquare(10, Point3f(0.5, 0.5, 1), Matrix4f::returnRotationMatrix(3.1415 / 2, 1, 0, 0));
+
 		cursor.initGLMesh();
 		gameTestObjs.initGLMesh();
 		mySphere.initGLMesh();
+		square.initGLMesh();
 
-		gameProcMap.initDraw();
+		#if TESTING_PROCEDURAL_MAP
+			gameProcMap.initDraw();
+		#endif
+
+		#if TESTING_PROCEDURAL_TEXTURE
+ 			gameProcTex.createRandTexture();
+		#endif
 
 		// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
@@ -96,7 +116,9 @@ public:
 	}
 	
 	void gameLogic() {
-		gameProcMap.update(Point2f(camPos.x, camPos.z)); 
+		#if TESTING_PROCEDURAL_MAP
+			gameProcMap.update(Point2f(camPos.x, camPos.z)); 
+		#endif
 		// std::cout << QuadNode<DefaultProceduralChoser>::quadCount << std::endl;
 	}
 
@@ -109,14 +131,29 @@ public:
 
 		cursor.draw(gameMenuShader);
 
-		gameMapShader.useProgram();
-		gameMapShader.setMatrix("projectionMatrix", proj);
-		gameMapShader.setMatrix("viewMatrix", view);
-		gameMapShader.setVector("lightDir", lightDir);
+		gameMenuShader.disableProgram();
 
-		gameMapShader.setMatrix("worldMatrix", GameMesh::topMatrixStack());
-		gameProcMap.draw(gameMapShader);
-		// gameProcMap.debugDraw();
+		#if TESTING_PROCEDURAL_MAP
+			gameMapShader.useProgram();
+			gameMapShader.setMatrix("projectionMatrix", proj);
+			gameMapShader.setMatrix("viewMatrix", view);
+			gameMapShader.setVector("lightDir", lightDir);
+
+			gameMapShader.setMatrix("worldMatrix", GameMesh::topMatrixStack());
+			gameProcMap.draw(gameMapShader);
+			gameProcMap.disableProgram();
+		#endif
+
+		#if TESTING_PROCEDURAL_TEXTURE
+			gameTexShader.useProgram();
+			gameTexShader.setMatrix("projectionMatrix", proj);
+			gameTexShader.setMatrix("viewMatrix", view);
+			gameTexShader.setVector("lightDir", lightDir);
+
+			gameProcTex.bind();
+			square.draw(gameTexShader);
+			gameTexShader.disableProgram();
+		#endif
 
 		gameDefaultShader.useProgram();
 		gameDefaultShader.setMatrix("projectionMatrix", proj);
@@ -124,11 +161,12 @@ public:
 		gameDefaultShader.setVector("lightDir", lightDir);
 
 		GameMesh::pushMatrix(Matrix4f::returnTranslationMatrix(camPos.x, 0, camPos.z));
-			// mySphere.draw(gameDefaultShader);
+			mySphere.draw(gameDefaultShader);	// walks with player
 		GameMesh::popMatrix();
+		gameTestObjs.draw(gameDefaultShader);
 
-		// gameTestObjs.draw(gameDefaultShader);
- 
+		gameDefaultShader.disableProgram();
+
 		if (fpsCount.hasUpdated()) {
 			std::cout << "FPS: " << fpsCount.getCount() << std::endl;
 			fpsCount.resetUpdate();

@@ -52,12 +52,14 @@ public:
 		glMesh.draw(shader);
 	}
 
-	void addVert (Point3f pos, Point3f color, Point3f normal = Point3f(0, 0, 0)) {
+	void addVert (Point3f pos, Point3f color, Point3f normal = Point3f(0, 0, 0)
+			, Point2f tex = Point2f(0, 0)) {
 		GameVertexType newVert;
 
 		newVert.get<VertexPosition>() = pos;
 		newVert.get<VertexColor>() = color;
 		newVert.get<VertexNormal>() = normal;
+		newVert.get<VertexTexCoord>() = tex;
 		mesh.addVertex(newVert);
 	}
 
@@ -93,10 +95,10 @@ public:
 	{
 		int index = mesh.getVertCount();
 	
-		addVert(transf * Point3f(-side, -side, 0), color, transf.mult(normal));
-		addVert(transf * Point3f( side, -side, 0), color, transf.mult(normal));
-		addVert(transf * Point3f( side,  side, 0), color, transf.mult(normal));
-		addVert(transf * Point3f(-side,  side, 0), color, transf.mult(normal));
+		addVert(transf * Point3f(-side, -side, 0), color, transf.mult(normal), Point2f(0, 0));
+		addVert(transf * Point3f( side, -side, 0), color, transf.mult(normal), Point2f(0, 1));
+		addVert(transf * Point3f( side,  side, 0), color, transf.mult(normal), Point2f(1, 1));
+		addVert(transf * Point3f(-side,  side, 0), color, transf.mult(normal), Point2f(1, 0));
 
 		mesh.elementIndex.push_back(std::vector<int>{index + 0, index + 1, index + 2, index + 3});
 	}

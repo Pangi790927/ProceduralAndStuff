@@ -1,6 +1,9 @@
 #version 130
 
 in vec4 color;
+in vec2 texCoord;
+
+uniform sampler2D texture;
 
 /// flat 
 in vec3 normal;
@@ -19,7 +22,7 @@ void main()
 
 	/// lighting
 	diffuze *= max(dot(normal, lightDir), 0.0f);
-	vec4 fragColor = color * (diffuze + ambient);	
+	vec4 fragColor = texture2D(texture, texCoord) * (diffuze + ambient);	
 
 	/// tone map?
 	fragColor = fragColor / (1 + fragColor);

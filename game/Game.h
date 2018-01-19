@@ -157,8 +157,10 @@ public:
 //		we load identity for menu
 		gameMenuShader.setMatrix("projectionMatrix", Matrix4f::returnIdentityMatrix());
 		gameMenuShader.setMatrix("viewMatrix", Matrix4f::returnIdentityMatrix());
+		gameMenuShader.setMatrix("worldMatrix", Matrix4f::returnIdentityMatrix());
 
 		// cursor.draw(gameMenuShader);
+		simulator.drawTimeLine(gameMenuShader);
 
 		gameMenuShader.disableProgram();
 
@@ -168,9 +170,21 @@ public:
 		gameDefaultShader.setMatrix("worldMatrix", Matrix4f::returnIdentityMatrix());
 		gameDefaultShader.setVector("lightDir", lightDir);
 
-		for (int i = 0; i < 10; i++)
-			simulator.update();
+		static int updateTime = 0;
 
+		int speedLowering = 0;
+		int loopsPerFrame = 10;
+
+		// int speedLowering = 100;
+		// int loopsPerFrame = 1;
+
+		updateTime++;
+		if (updateTime > speedLowering)
+		{
+			updateTime = 0;
+			for (int i = 0; i < loopsPerFrame; i++)
+				simulator.update();
+		}
 		simulator.drawParticles(gameDefaultShader);
 		// simulator.drawTorus(gameDefaultShader);
 		// simulator.drawNodes(gameDefaultShader);
@@ -178,7 +192,7 @@ public:
 		gameDefaultShader.disableProgram();
 
 		if (fpsCount.hasUpdated()) {
-			std::cout << "FPS: " << fpsCount.getCount() << std::endl;
+			// std::cout << "FPS: " << fpsCount.getCount() << std::endl;
 			fpsCount.resetUpdate();
 		}
 		else {

@@ -5,26 +5,38 @@
 
 class EnvNode {
 public:
-	const int MAX_FOOD = 1e4;
-	const int MAX_DISEASE = 1e4;
+	float lastUpdate = 0;
+	float food = 0;
+	float disease = 0;
 
-	const int FOOD_INC = 1;
-	const int DISEASE_INC = -1;
-
-	int lastUpdate = 0;
-	int food = MAX_FOOD;
-	int disease = 0;
+	static float MAX_NODE_DISEASE;
+	static float MAX_NODE_FOOD;
+	static float DISEASE_INC;
+	static float FOOD_INC;
 
 	Point3f dir;
 
 	void update (int time) {
 		if (time != lastUpdate)
 		{
-			food = std::min(food + time * FOOD_INC, MAX_FOOD);
-			disease = std::min(disease + time * DISEASE_INC, MAX_DISEASE);
+			food = std::min(food + (time - lastUpdate) * FOOD_INC, MAX_NODE_FOOD);
+			disease = std::max(std::min(disease + (time - lastUpdate) * DISEASE_INC,
+					MAX_NODE_DISEASE), 0.0f);
 			lastUpdate = time;
 		}
 	}
+
+	static void init() {
+		MAX_NODE_DISEASE = opts["MAX_NODE_DISEASE"];
+		MAX_NODE_FOOD = opts["MAX_NODE_FOOD"];
+		DISEASE_INC = opts["DISEASE_INC"];
+		FOOD_INC = opts["FOOD_INC"];
+	}
 };
+
+float EnvNode::MAX_NODE_DISEASE = 0;
+float EnvNode::MAX_NODE_FOOD = 0;
+float EnvNode::DISEASE_INC = 0;
+float EnvNode::FOOD_INC = 0;
 
 #endif

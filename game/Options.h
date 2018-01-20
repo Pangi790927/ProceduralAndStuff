@@ -17,11 +17,28 @@ public:
 		std::string optionName;
 		float optionValue;
 
-		while (file >> optionName && file >> optionValue) {
-			options[optionName] = optionValue;
+		while (file >> optionName) {
+			if (optionName.size() >= 1 && optionName[0] == '#') {
+				std::string line;
+				getline(file, line);
+				std::cout << line << std::endl;
+			}
+			else if (file >> optionValue) {
+				options[optionName] = optionValue;
+			}
 		}
 
+		std::cout << *this << std::endl;
+
 		file.close(); 
+	}
+
+	friend std::ostream& operator << (std::ostream &stream, Options &arg) {
+		for (auto&& entry : arg.options) {
+			std::cout << entry.first << " " << entry.second << std::endl;
+		}
+
+		return stream;
 	}
 
 	float operator [] (std::string name) {

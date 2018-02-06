@@ -25,17 +25,28 @@ public:
 	static std::stack<Matrix4f> matrixStack;
 
 	static void pushMatrix(Matrix4f transf) {
+		static std::once_flag flag;
+		std::call_once(flag, [&](){ 
+			if (matrixStack.empty())
+				matrixStack.push(Matrix4f::returnIdentityMatrix()); 
+		});
 		matrixStack.push(matrixStack.top() * transf);
 	}
 
 	static void popMatrix() {
+		static std::once_flag flag;
+		std::call_once(flag, [&](){ 
+			if (matrixStack.empty())
+				matrixStack.push(Matrix4f::returnIdentityMatrix()); 
+		});
 		matrixStack.pop();
 	}
 
 	static Matrix4f& topMatrixStack() {
 		static std::once_flag flag;
 		std::call_once(flag, [&](){ 
-			matrixStack.push(Matrix4f::returnIdentityMatrix()); 
+			if (matrixStack.empty())
+				matrixStack.push(Matrix4f::returnIdentityMatrix()); 
 		});
 
 		return matrixStack.top();
@@ -61,6 +72,16 @@ public:
 		newVert.get<VertexNormal>() = normal;
 		newVert.get<VertexTexCoord>() = tex;
 		mesh.addVertex(newVert);
+	}
+
+	void addPoint (Point3f A,
+			Point3f color = Point3f(1, 1, 1), Matrix4f transf = Matrix4f::returnIdentityMatrix()) 
+	{
+		int index = mesh.getVertCount();
+
+		addVert(transf * A, color);
+
+		mesh.elementIndex.push_back(std::vector<int>{index + 0});
 	}
 
 	/// transf is additional transformation to the object to be added

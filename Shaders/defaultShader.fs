@@ -15,7 +15,6 @@ void main()
 	float diffuze = 0.7f;
 
 	diffuze *= max(dot(normal, lightDir), 0.0f);
-	diffuze = 1;
 
 	vec4 fragColor = (color + vec4(uColor, 1.0f)) * (diffuze + ambient);
 	fragColor.a = 1.0f;

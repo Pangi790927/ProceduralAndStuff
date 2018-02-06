@@ -7,8 +7,10 @@
 
 #include "ProceduralMap.h"
 #include "ProceduralTexture.h"
+#include "ProceduralSound.h"
+#include "Sound.h"
 
-#define TESTING_PROCEDURAL_MAP 0
+#define TESTING_PROCEDURAL_MAP 1
 #define TESTING_PROCEDURAL_TEXTURE 1
 
 class Game {
@@ -17,10 +19,13 @@ public:
 	GameMesh mySphere;
 	GameMesh gameTestObjs;
 	GameMesh square;
+	
 	ShaderProgram gameMenuShader;
 	ShaderProgram gameDefaultShader;
 	ShaderProgram gameMapShader;
 	ShaderProgram gameTexShader;
+
+	SoundSource soundSource;
 
 	Point3f lightDir = Point3f(-1.0, -3.0, -2.0).normalize();
 
@@ -29,14 +34,19 @@ public:
 
 	Point3f mousePos;
 	Point3f camPos;
-	ProceduralMap<> gameProcMap;
 
+#if TESTING_PROCEDURAL_MAP
+	ProceduralMap<> gameProcMap;
+#endif
 	ProceduralTexture gameProcTex;
+	ProceduralSound gameProcSound;
 
 	FPSCounter fpsCount;
 
 	Game() 
+#if TESTING_PROCEDURAL_MAP
 	: gameProcMap(100, 9, Point2f(0, 0)), gameProcTex(256, 256)
+#endif
 	{}
 
 	ShaderProgram loadShader(std::string shaderName) {
@@ -58,6 +68,84 @@ public:
 	void init() {
 		glEnable(GL_MULTISAMPLE);
 		glEnable(GL_TEXTURE_2D);
+
+		// 				// do re mi fa so la si do 
+		// 				// A  B  C  D  E  F  G  A
+		
+		// auto notes = [](int note) {
+		// 	return pow(2.0, (note - 49) / 12.0) * 440;
+		// };
+
+		// int DO = 37;
+		// int RE = 39;
+		// int MI = 40;
+		// int FA = 42;
+		// int SO = 44;
+		// int LA = 45;
+		// int SI = 47;
+		// int SILENT = -1;
+
+		// int note[] = {DO, RE, MI, FA, SO, LA, SI};
+		// unsigned char s = 255;	// silent
+
+		// unsigned char doremiSong[] = {
+		// 	1, 2, 3, 4, 5, 6, 7, 1
+		// };
+
+		unsigned char s = 255;
+		unsigned char yesterday[] = {
+			2, 1, 1, s, s, s, s, s,		s, s, 3, 4, 5, 6, 7, 8,
+			7, 6, 6, s, s, s, s, s,		s, s, 6, 6, 5, 4, 3, 2,
+			4, s, 3, 3, s, s, 2, s,		1, s, 3, 2, s, s, 6, s,
+			1, s, 3, 3, s, s, s, s,		3, s, s, s, 3, s, s, s,
+			6, s, 7, s, 8, s, 7, 6,		7, s, s, 6, 5, s, 6, 3,
+			s, s, s, s, s, s, s, s,		3, s, s, s, 3, s, s, s 	
+		};
+
+		// char S = -1;
+		// char keyStrokes1[] = {
+		// 	30, S, S, S, S, 31, S, S, S, S, 32, S, S, S, S, 33,
+		// 	34, S, S, S, S, 35, S, S, S, S, 36, S, S, S, S, 37,
+		// 	38, S, S, S, 39, S, S, S, 40, S, S, S, 41,
+		// 	42, S, S, S, 43, S, S, S, 44, S, S, S, 45,
+		// 	46, S, S, 47, S, S, 48, S, S, 49,
+		// 	50, S, S, 51, S, S, 52, S, S, 53
+		// };
+
+		// auto playSongDoToSi = [&](unsigned char* song, int size) {
+		// 	for (int i = 0; i < size; i++) {
+		// 		if (song[i] != 255)
+		// 			Sound::playNote(notes(note[song[i]]), 1.5);
+				
+		// 		usleep(125 * 1000);
+		// 	}
+		// };
+
+		// auto playSong = [&](char* song, int size) {
+		// 	for (int i = 0; i < size; i++) {
+		// 		if (song[i] != -1)
+		// 			Sound::playNote(notes(song[i]), 1.5);
+				
+		// 		usleep(125 * 1000);
+		// 	}
+		// };
+
+		Sound::init();
+			
+		// gameProcSound.addNote(0, 440, 1.5);
+		gameProcSound.addSong(yesterday, sizeof(yesterday));
+		gameProcSound.createBuffer();
+
+		float pos[] = {0, 0, 0};
+		float vel[] = {0, 0, 0};
+		float orient[] = {0, 0, -1, 0, 1, 0};
+		soundSource.createSource(gameProcSound, pos, vel, orient);
+		
+		soundSource.play();
+
+		// // playSongDoToSi(doremiSong, sizeof(doremiSong));
+		// playSongDoToSi(yesterday, sizeof(yesterday));
+		// // playSong(keyStrokes1, sizeof(keyStrokes1));
 
 		gameMenuShader = loadShader("Shaders/gameMenuShader");
 		gameMapShader = loadShader("Shaders/gameMapShader");
@@ -129,7 +217,7 @@ public:
 		gameMenuShader.setMatrix("projectionMatrix", Matrix4f::returnIdentityMatrix());
 		gameMenuShader.setMatrix("viewMatrix", Matrix4f::returnIdentityMatrix());
 
-		cursor.draw(gameMenuShader);
+		// cursor.draw(gameMenuShader);
 
 		gameMenuShader.disableProgram();
 
@@ -140,8 +228,10 @@ public:
 			gameMapShader.setVector("lightDir", lightDir);
 
 			gameMapShader.setMatrix("worldMatrix", GameMesh::topMatrixStack());
+			gameProcTex.bind();
 			gameProcMap.draw(gameMapShader);
-			gameProcMap.disableProgram();
+			
+			gameMapShader.disableProgram();
 		#endif
 
 		#if TESTING_PROCEDURAL_TEXTURE
@@ -150,6 +240,7 @@ public:
 			gameTexShader.setMatrix("viewMatrix", view);
 			gameTexShader.setVector("lightDir", lightDir);
 
+			// gameProcTex.bind();
 			gameProcTex.bind();
 			square.draw(gameTexShader);
 			gameTexShader.disableProgram();
@@ -163,7 +254,16 @@ public:
 		GameMesh::pushMatrix(Matrix4f::returnTranslationMatrix(camPos.x, 0, camPos.z));
 			mySphere.draw(gameDefaultShader);	// walks with player
 		GameMesh::popMatrix();
-		gameTestObjs.draw(gameDefaultShader);
+		GameMesh::pushMatrix(Matrix4f::returnTranslationMatrix(15, 0, 0));
+			gameTestObjs.draw(gameDefaultShader);
+		GameMesh::popMatrix();
+		// GameMesh::pushMatrix(Matrix4f::returnTranslationMatrix(0, 10, 0));
+		// 	gameProcSound.draw(gameDefaultShader);
+		// 	GameMesh::pushMatrix(Matrix4f::returnTranslationMatrix(soundSource.getStatef(AL_SEC_OFFSET), 0, 0));
+		// 		std::cout << soundSource.getStatef(AL_SEC_OFFSET) << std::endl;
+		// 		mySphere.draw(gameDefaultShader);
+		// 	GameMesh::popMatrix();
+		// GameMesh::popMatrix();
 
 		gameDefaultShader.disableProgram();
 
@@ -174,6 +274,10 @@ public:
 		else {
 			fpsCount.getCount();
 		}
+	}
+
+	~Game() {
+		Sound::free();
 	}
 };
 

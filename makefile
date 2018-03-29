@@ -1,9 +1,10 @@
 CC = gcc
 CXX = g++
 
-DIRS = 	game									\
+DIRS = 	main									\
 		sound									\
 		time									\
+		collisions								\
 		graphics								\
 		graphics/procedural						\
 		graphics/procedural/proceduralMap		\

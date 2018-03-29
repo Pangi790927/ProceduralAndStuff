@@ -13,7 +13,7 @@
 #include "Mesh.h"
 #include "OBJLoader.h"
 #include "FixedFunctionMeshDraw.h"
-#include "Game.h"
+#include "Main.h"
 
 typedef Vertex <
 	VertexAttribute <
@@ -29,7 +29,7 @@ class MainDrawFunc : public DrawFunction {
 public:
 	MainDrawFunc(OpenGLWindow &window) : DrawFunction(window) {}
 
-	Game game;
+	Main game;
 
 	Camera camera;
 	float cammeraSpeed = 0.5;

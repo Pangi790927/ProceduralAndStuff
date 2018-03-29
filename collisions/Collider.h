@@ -56,24 +56,27 @@ namespace Collider
 {
 	/// Point (it is Point3<Type>)
 	/// Ray, Line(2xRay), Segment(2xRay)
+
+	float EPSILON = 1e-6;
+
 	template <typename Type>
 	class Ray {
 	public:
-		Point3<Type> origin;
-		Point3<Type> direction;
+		Point3<Type> o;
+		Point3<Type> dir;
 
 		Ray() {}
-		Ray (Point3<Type> origin, Point3<Type> direction) : origin(origin), direction(direction) {}
+		Ray (Point3<Type> o, Point3<Type> dir) : o(o), dir(dir) {}
 	};
 
 	template <typename Type>
 	class Line {
 	public:
-		Point3<Type> origin;
-		Point3<Type> direction;
+		Point3<Type> o;
+		Point3<Type> dir;
 
 		Line() {}
-		Line (Point3<Type> origin, Point3<Type> direction) : origin(origin), direction(direction) {}
+		Line (Point3<Type> o, Point3<Type> dir) : o(o), dir(dir) {}
 	};
 
 	template <typename Type>
@@ -104,8 +107,8 @@ namespace Collider
 		Point3<Type> second;
 		Point3<Type> third;
 
-		Plane() {}
-		Plane (Point3<Type> first, Point3<Type> second, Point3<Type> third) 
+		Triangle() {}
+		Triangle (Point3<Type> first, Point3<Type> second, Point3<Type> third) 
 				: first(first), second(second), third(third) {}
 	};
 
@@ -116,8 +119,8 @@ namespace Collider
 		Point3<Type> normal;
 		Type radius;
 
-		Plane() {}
-		Plane (Point3<Type> origin, Point3<Type> normal, Type radius) 
+		Disc() {}
+		Disc (Point3<Type> origin, Point3<Type> normal, Type radius) 
 				: origin(origin), normal(normal), radius(radius) {}
 	};
 
@@ -143,16 +146,13 @@ namespace Collider
 	};
 
 	template <typename Type>
-	class Convex {
+	class ConvexShape {
 	public:
 		std::vector<Triangle<Type>> triangles;
 
-		Convex() {}
-		Convex (std::vector<Triangle<Type>>& triangles) : triangles(triangles) {}
+		ConvexShape() {}
+		ConvexShape (std::vector<Triangle<Type>>& triangles) : triangles(triangles) {}
 	};
-
-	float EPSILON = 1e-6;
-
 	/// we always collide first with second
 
 	/// Point - Point => Distance < Eps
@@ -164,11 +164,11 @@ namespace Collider
 	/// Point - Ray => Projection on line? => proj else origin of Ray
 	template<typename Type>
 	std::pair<bool, Point3<Type>> collide (Point3<Type> point, Ray<Type> ray) {
-		auto alpha = ray.direction.dot(point - ray.origin);
-		auto closestToRay = ray.origin + ray.direction * alpha;
+		auto alpha = ray.dir.dot(point - ray.o);
+		auto closestToRay = ray.o + ray.dir * alpha;
 		
 		if (alpha < 0)
-			closestToRay = ray.origin;
+			closestToRay = ray.o;
 
 		return std::pair<bool, Point3<Type>>((closestToRay - point).absSquared() < EPSILON * EPSILON && 
 				alpha > 0, closestToRay);
@@ -178,7 +178,7 @@ namespace Collider
 	template<typename Type>
 	std::pair<bool, Point3<Type>> collide (Point3<Type> point, Line<Type> line) {
 		auto alpha = line.direction.dot(point - line.origin);
-		auto closestToLine = ray.origin + ray.direction * alpha;
+		auto closestToLine = line.o + line.dir * alpha;
 
 		return std::pair<bool, Point3<Type>>((closestToLine - point).absSquared() < EPSILON * EPSILON,
 				closestToLine);
@@ -188,8 +188,8 @@ namespace Collider
 	template<typename Type>
 	std::pair<bool, Point3<Type>> collide (Point3<Type> point, Segment<Type> segment) {
 		auto direction = segment.second - segment.first;
-		auto alpha = direction.dot(point - line.origin);
-		auto closestToSegment = ray.origin + direction * alpha;
+		auto alpha = direction.dot(point - segment.first);
+		auto closestToSegment = segment.first + direction * alpha;
 
 		if (alpha < 0)
 			closestToSegment = segment.first;
@@ -215,7 +215,7 @@ namespace Collider
 
 	/// Point - Triangle => is Proj Point in Triangle ? Point : min(edge1, edge2, edge3)
 	template<typename Type>
-	std::pair<bool, Point3<Type>> collide (Point3<Type> point, Plane<Type> Triangle) {
+	std::pair<bool, Point3<Type>> collide (Point3<Type> point, Triangle<Type> triangle) {
 		// tringle.first will be the origin
 		auto firstSegment = triangle.second - triangle.first;
 		auto secondSegment = triangle.third - triangle.first;
@@ -235,9 +235,9 @@ namespace Collider
 		}
 		else {
 			// not in the triangle 
-			auto firstCollision = collide(point, Segment<Type>(Triangle.first, Triangle.second));
-			auto secondCollision = collide(point, Segment<Type>(Triangle.first, Triangle.third));
-			auto thirdCollision = collide(point, Segment<Type>(Triangle.second, Triangle.third));
+			auto firstCollision = collide(point, Segment<Type>(triangle.first, triangle.second));
+			auto secondCollision = collide(point, Segment<Type>(triangle.first, triangle.third));
+			auto thirdCollision = collide(point, Segment<Type>(triangle.second, triangle.third));
 
 			if ((firstCollision.second - point).absSquared() < 
 					(secondCollision.second - point).absSquared())
@@ -303,6 +303,61 @@ namespace Collider
 	/// Point - Cylinder => proj on main line? get closest, projection on discs ? get closest get minimum
 	/// Point - Convex => min of closest to all triangles with check if inside convex(pass rand line in point)
 	/// Ray - Ray => Some algorithm on google giving I1 and I2 (two points)
+	template <typename Type>
+	std::pair<bool, Point3<Type>> collide (Ray<Type> A, Ray<Type> B) {
+		float intersect = cross(
+			cross(A.dir, A.o - B.o),
+			cross(B.dir, A.o - B.o)
+		).absSquared();
+
+		if (intersect < EPSILON * EPSILON) {
+			// p - A.o
+			// r - A.dir
+			// q - B.o
+			// s - B.dir
+
+			// p + t r == q + u s 
+
+			// t = (q - p) x s / (r x s).abs();
+			// u = (q - p) x r / (r x s).abs();
+
+			auto rs = A.dir.cross(B.dir).abs();
+			auto qp = B.o - A.o;
+
+			// if (r x s) == 0 and (q - p) x r == 0
+			if (rs < EPSILON && abs(qp.cross(A.dir)) < EPSILON) {
+				auto t0 = qp.dot(A.dir / A.dir.dot(A.dir));
+				auto t1 = (qp + B.dir).dot(A.dir / A.dir.dot(A.dir));
+
+				if (t0 < 0 && 1 < t1 || t1 < 0 && 1 < t0 || t0 < 1 && t0 > 0
+						|| t1 < 1 && t1 > 1)
+				{
+					return std::pair<bool, Point3<Type>>(true, t0 * A.dir + A.o);
+				}
+				else 
+					return std::pair<bool, Point3<Type>>(false, A.o);
+			}
+			// else if (r x s) != 0
+			else if (rs >= EPSILON) {
+				auto t = qp.cross(B.dir) / rs;
+				auto u = qp.cross(A.dir) / rs;
+
+				/// for ray: 
+				if (t >= 0 && u >= 0)
+					return std::pair<bool, Point3<Type>>(true, A.o + u * A.dir);
+				else
+					return std::pair<bool, Point3<Type>>(false, A.o);
+			}
+			// else if (r x s) == 0 and (q - p) x r != 0 => no intersection
+			// else => no intersection 
+
+			return std::pair<bool, Point3<Type>>(false, A.o);
+		}
+		else {
+			return std::pair<bool, Point3<Type>>(false, A.o);
+		}
+	}
+
 	/// Ray - Line => Same algortihm as above 
 	/// Ray - Segment =??> above for support segment + the point to segment alg
 	/// Ray - Plane => ?? (if line is paralel closest to origin plane is chosen to find distance)
